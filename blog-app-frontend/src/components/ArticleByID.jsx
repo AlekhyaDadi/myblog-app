@@ -102,11 +102,31 @@ function ArticleByID() {
   const addComment = async (commentObj) => {
     //add artcileId
     commentObj.articleId = article._id;
+    //add user id from auth state
+    commentObj.user = user._id;
     console.log(commentObj);
     let res = await axios.put("http://localhost:4000/user-api/articles", commentObj, { withCredentials: true });
     if (res.status === 200) {
       toast.success(res.data.message);
       setArticle(res.data.payload);
+    }
+  };
+
+  //soft-delete comment by author
+  const deleteComment = async (commentId) => {
+    if (!window.confirm("Delete this comment?")) return;
+    try {
+      const res = await axios.patch(
+        `http://localhost:4000/author-api/articles/${article._id}/comments/${commentId}`,
+        {},
+        { withCredentials: true }
+      );
+      if (res.status === 200) {
+        toast.success(res.data.message);
+        setArticle(res.data.payload);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete comment");
     }
   };
 
@@ -163,14 +183,26 @@ function ArticleByID() {
       )}
 
       {/* comments */}
-      {article.comments.map((comment) => (
-        <div className="bg-gray-300 p-6 rounded-2xl mt-4">
-          <p className="uppercase text-pink-400 font-bold mb-3">
-          {comment.user?.email}
-          </p>
-          <p>{comment.comment}</p>
-        </div>
-      ))}
+      {article.comments
+        .filter((c) => c.isCommentActive !== false)
+        .map((comment) => (
+          <div key={comment._id} className="bg-gray-300 p-6 rounded-2xl mt-4 flex justify-between items-start">
+            <div>
+              <p className="uppercase text-pink-400 font-bold mb-3">
+                {comment.user?.email}
+              </p>
+              <p>{comment.comment}</p>
+            </div>
+            {user?.role === "AUTHOR" && article.author?._id?.toString() === user._id && (
+              <button
+                onClick={() => deleteComment(comment._id)}
+                className="ml-4 text-sm text-red-500 hover:text-red-700 font-semibold shrink-0"
+              >
+                Delete
+              </button>
+            )}
+          </div>
+        ))}
 
       {/* Footer */}
       <div className={articleFooter}>Last updated: {formatDate(article.updatedAt)}</div>

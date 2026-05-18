@@ -9,6 +9,10 @@ const userCommentSchema = new Schema({
   comment: {
     type: String,
   },
+  isCommentActive: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 //create article schema

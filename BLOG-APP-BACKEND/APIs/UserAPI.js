@@ -53,16 +53,15 @@ userRoute.get("/articles", verifyToken("USER"), async (req, res) => {
 //Add comment to an article(protected route)
 userRoute.put("/articles", verifyToken("USER"), async (req, res) => {
   //get comment obj from req
-  const { user, articleId, comment } = req.body;
-  //check user(req.user)
+  const { articleId, comment } = req.body;
+  // Use userId from verified JWT token (more secure than trusting client-sent user)
+  const userId = req.user.userId;
   console.log(req.user);
-  if (user !== req.user.userId) {
-    return res.status(403).json({ message: "Forbidden" });
-  }
-  //find artcleby id and update
+
+  //find article by id and update
   let articleWithComment = await ArticleModel.findOneAndUpdate(
     { _id: articleId, isArticleActive: true },
-    { $push: { comments: { user, comment } } },
+    { $push: { comments: { user: userId, comment } } },
     { new: true, runValidators: true },
   );
 

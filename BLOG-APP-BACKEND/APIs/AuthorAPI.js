@@ -122,6 +122,30 @@ authorRoute.patch("/articles/:id/status", verifyToken("AUTHOR"), async (req, res
   //send res
   res.status(200).json({
     message: `Article ${isArticleActive ? "restored" : "deleted"} successfully`,
-    payload: article, // ✅ use payload instead of article
+    payload: article,
   });
+});
+
+//Soft-delete a comment on author's article (protected route)
+authorRoute.patch("/articles/:articleId/comments/:commentId", verifyToken("AUTHOR"), async (req, res) => {
+  const { articleId, commentId } = req.params;
+
+  // Find article and verify ownership
+  const article = await ArticleModel.findOne({ _id: articleId, author: req.user.userId });
+  if (!article) {
+    return res.status(403).json({ message: "Article not found or you don't own this article" });
+  }
+
+  // Find and soft-delete the comment
+  const updatedArticle = await ArticleModel.findOneAndUpdate(
+    { _id: articleId, "comments._id": commentId },
+    { $set: { "comments.$.isCommentActive": false } },
+    { new: true }
+  ).populate("comments.user", "email firstName");
+
+  if (!updatedArticle) {
+    return res.status(404).json({ message: "Comment not found" });
+  }
+
+  res.status(200).json({ message: "Comment deleted successfully", payload: updatedArticle });
 });
